@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collaborative Online Notepad</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            position: relative;
+        }
+        textarea {
+            width: 80%;
+            height: 80%;
+            padding: 10px;
+            font-size: 16px;
+            line-height: 1.2;
+        }
+        .passcode-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        .passcode-modal input {
+            padding: 10px;
+            font-size: 16px;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="passcode-modal" id="passcode-modal">
+        <input type="password" id="passcode-input" placeholder="Enter Passcode">
+        <button onclick="checkPasscode()">Submit</button>
+    </div>
+    <textarea id="notepad" class="hidden" placeholder="Start typing..."></textarea>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        const notepad = document.getElementById('notepad');
+        const passcodeModal = document.getElementById('passcode-modal');
+        const passcodeInput = document.getElementById('passcode-input');
+
+        const passcode = '1234'; // Set your passcode here
+        let idleTimeout;
+
+        function checkPasscode() {
+            if (passcodeInput.value === passcode) {
+                passcodeModal.classList.add('hidden');
+                notepad.classList.remove('hidden');
+                resetIdleTimer();
+            } else {
+                alert('Incorrect passcode');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            passcodeModal.classList.remove('hidden');
+            notepad.classList.add('hidden');
+            passcodeInput.focus();
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                showPasscodeModal();
+            }
+        });
+
+        function showPasscodeModal() {
+            passcodeModal.classList.remove('hidden');
+            notepad.classList.add('hidden');
+            passcodeInput.value = '';
+            passcodeInput.focus();
+        }
+
+        function resetIdleTimer() {
+            clearTimeout(idleTimeout);
+            idleTimeout = setTimeout(showPasscodeModal, 30000);
+        }
+
+        ['mousemove', 'keypress', 'mousedown', 'touchstart'].forEach(event => {
+            document.addEventListener(event, resetIdleTimer, true);
+        });
+
+        passcodeInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                checkPasscode();
+            }
+        });
+
+        socket.on('load content', content => {
+            notepad.value = content;
+        });
+
+        notepad.addEventListener('input', () => {
+            const cursorPos = notepad.selectionStart;
+            socket.emit('save content', {
+                content: notepad.value,
+                cursorPos
+            });
+            resetIdleTimer();
+        });
+
+        socket.on('update content', ({ content, cursorPos, senderId }) => {
+            const scrollPos = notepad.scrollTop;
+            const currentCursorPos = notepad.selectionStart;
+
+            notepad.value = content;
+            notepad.setSelectionRange(currentCursorPos, currentCursorPos);
+            notepad.scrollTop = scrollPos;
+        });
+
+        socket.emit('new user', { userId: Math.random().toString(36).substr(2, 9) });
+    </script>
+</body>
+</html>
