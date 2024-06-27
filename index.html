@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Notepad</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        textarea {
+            width: 80%;
+            height: 80%;
+            padding: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <textarea id="notepad" placeholder="Start typing..."></textarea>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        const notepad = document.getElementById('notepad');
+
+        // Load saved content on connection
+        socket.on('load content', content => {
+            notepad.value = content;
+        });
+
+        // Listen for changes in the textarea
+        notepad.addEventListener('input', () => {
+            socket.emit('save content', notepad.value);
+        });
+    </script>
+</body>
+</html>
