@@ -9,7 +9,8 @@ git clone https://github.com/kevintmax/noty.git
 cd noty
 
 # Install project dependencies
-npm install
+npm init -y
+npm install express socket.io
 
 # Set file permissions
 chmod 755 server.js
